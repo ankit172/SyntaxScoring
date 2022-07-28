@@ -1,2 +1,2 @@
 # SyntaxScoring
-SyntaxScoring for implmenting AdventofCode 2021 day10 puzzle
+SyntaxScoring for implementing AdventofCode 2021 day10 puzzle
