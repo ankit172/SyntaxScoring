@@ -9,19 +9,27 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 public class MainActivity extends AppCompatActivity {
     int totalSyntaxErrorScore = 0;
+    List<Long> totalCompletionStringScore = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Access text view where total syntax error score can be displayed
-        TextView resultTextView = (TextView) findViewById(R.id.result);
+        // Access text view where results can be displayed
+        TextView result1TextView = findViewById(R.id.result1);
+        TextView result2TextView = findViewById(R.id.result2);
 
         // Read the input resource file into input stream, which contain the sequence of data
         // arranged in line, meaning each line has return carriage
@@ -57,7 +65,9 @@ public class MainActivity extends AppCompatActivity {
                         stack.add('>');
                         break;
                     default: {
-                        //In case character encounter is closing character
+                        // In case character encounter is closing character
+                        // Return in order not to execute for second part which is valid only for
+                        // incomplete lines and not for corrupt lines
                         Character head = stack.pop();
                         if (head == null) {
                             return;
@@ -69,10 +79,45 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
+
+            // Create reverse of stack since first closing character will be at bottom of stack
+            Stack<Character> newStack = new Stack<>();
+            for (int i = 0; i < stack.size(); i++) {
+                newStack.push(stack.get(stack.size() - i - 1));
+            }
+            // Defined as atomic to access within lambda function
+            AtomicLong totalScore = new AtomicLong();
+            newStack.forEach(c -> {
+                    totalScore.updateAndGet(v -> v * 5);
+                    switch (c) {
+                        case ')':
+                            totalScore.updateAndGet(v -> v + 1);
+                            break;
+                        case ']':
+                            totalScore.updateAndGet(v -> v + 2);
+                            break;
+                        case '}':
+                            totalScore.updateAndGet(v -> v + 3);
+                            break;
+                        case '>':
+                            totalScore.updateAndGet(v -> v + 4);
+                            break;
+                        default:
+                    }
+                });
+            totalCompletionStringScore.add(totalScore.get());
         });
-        String result = "Total Syntax error score: " + totalSyntaxErrorScore;
-        System.out.println(result);
-        resultTextView.setText(result);
+        String result1 = "Total syntax error score: " + totalSyntaxErrorScore;
+        System.out.println(result1);
+        result1TextView.setText(result1);
+
+        // Sorted in ascending order and get middle total score
+        long[] scoreList = totalCompletionStringScore.stream().mapToLong(Long::longValue).sorted().toArray();
+        long totalScore = scoreList[scoreList.length / 2];
+
+        String result2 = "Total completion string score: " + totalScore;
+        System.out.println(result2);
+        result2TextView.setText(result2);
     }
 
     /**
